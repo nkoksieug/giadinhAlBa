@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>Vòng xoay kỷ niệm</title>
+<meta name="viewport" content="width=device-width, initial-scale=0.67, maximum-scale=1.0, user-scalable=no">
+
+<style>
+  body {
+    font-family: 'Times New Roman', Times, serif;
+    background: #f7f9fc;
+    text-align: center;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    overflow-y: scroll;
+  }
+  h2{
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    width: 100px;
+    height: 100px;
+  }
+  h1 { 
+    font-family: 'Times New Roman', Times, serif;
+    margin: 90px 0; }
+  button {
+  background: #0d6efd;         /* màu xanh giống bootstrap */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px #0a0e15, 0 0 20px #181b1e;
+}
+
+button:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 20px #5d9071, 0 0 40px #649468, 0 0 60px #677d69;
+  background: #0dcaf0;   /* đổi sang màu xanh sáng hơn */
+}
+  .stage {
+    width: 100%;
+    height: 70vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .carousel {
+    width: 100%;
+    height: 100%;
+    perspective: 1500px;
+    margin-top: 100px;
+    margin-bottom: 50px;
+    display: flex;
+    justify-content: right;
+    scroll-snap-type: x mandatory;
+    align-items: center;
+    cursor: grab;
+  }
+  #carousel {
+    width: 80%;
+    height: 80vh;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden; 
+  }
+  h1, h2, h3 {
+    margin-bottom: 60px;
+    position: relative;
+    z-index: 2;
+  }
+  .carousel-slide img {
+    width: 100%;
+    height: auto;
+    max-height: 650px;   /* 👈 ảnh cao tối đa */
+    object-fit: contain; /* 👈 giữ ảnh nguyên tỉ lệ, không bị cắt */
+    border-radius: 20px;
+  }
+  .carousel-container {
+    perspective: 1000px;
+    max-width: 5000px;
+    padding: 20px;
+    height: 1000px;
+    max-height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding-bottom: 40px;
+  }
+  
+  .carousel.dragging { cursor: grabbing; }
+
+  .carousel-track {
+    width: 100%;
+    height: 1000px;
+    position: relative;
+    transform-style: preserve-3d;
+  }
+
+  .card {
+    width: 320px;
+    height: 300px;
+    border-radius: 1%;
+    box-shadow: 0 8px 20px rgba(254, 251, 251, 0.2);
+    text-align: center;
+    padding: 10px;
+    position: absolute;
+    top: 35px;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+    padding-bottom: 50px;
+    padding-top:1.8%;
+  }
+
+  .card img,
+.card video,
+.card iframe {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain; /* Giữ nguyên tỉ lệ */
+  border-radius: 10px;
+  display: block;
+  margin: auto;
+}
+
+  .caption {
+  margin: 20px 0 0;
+  font-weight: bold;
+  color: #5f425f; /* tím neon */
+  user-select: none;
+  font-size: 28px;
+  text-shadow: 
+    0 0 5px   #f3ebc4,
+    0 0 10px  #f3ebc4,
+    0 0 20px  #f3ebc4,
+    0 0 40px  #f3ebc4,
+    0 0 80px  #f3ebc4;
+}
+
+  .days {
+    margin-top: 100px;
+    display: grid;
+    grid-template-columns: repeat(6,1fr);
+    gap: 12px;
+    justify-items: center;
+  }
+  .day {
+    padding: 10px 14px;
+    background: #8b7637;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    opacity: 0.8;
+  }
+  .day:hover { background: #0056b3; }
+  .day.active { background: #0a58ca; }
+   .prev, .next {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #007bff;
+      color: #8b7d37;
+      border: none;
+      font-size: 32px;
+      padding: 14px 20px;
+      border-radius: 70%;
+      cursor: grab;
+      opacity: 0.9;
+      transition: 0.3s;
+      z-index: 10;
+      
+    }
+
+    .prev:hover, .next:hover {
+      background: #0056b3;
+      opacity: 1;
+    }
+
+    .prev { left: 20px; }
+    .next { right: 20px; }
+    canvas {
+      display: block;
+    }
+    .button-group {
+  display: flex;
+  flex-direction: column; /* xếp dọc */
+  gap: 10px;              /* khoảng cách giữa các nút */
+  position: absolute;     /* nếu muốn nút nổi 1 góc */
+  bottom: 20px;           /* chỉnh vị trí */
+  left: 20px;
+  
+}
+
+.button-group button {
+  padding: 10px 16px;      /* khoảng cách trong nút */
+  border: none;
+  border-radius: 6px;
+  background: #b18924;     /* màu nền nút */
+  color: white;            /* màu chữ */
+  font-size: 14px;         /* kích thước chữ */
+  font-weight: bold;       /* chữ đậm */
+  font-family:'Times New Roman', Times, serif; /* font chữ */
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.button-group button:hover {
+  background: #95893b;
+}
+    #bg-canvas {
+      position: fixed;   /* phủ toàn màn hình */
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;       /* nằm dưới carousel */
+      background: rgb(252, 248, 248); /* nền đen cho chữ rơi */
+    }
+    .falling-text {
+      position: absolute;
+      font-size: 22px;
+      color: #f0ff4dd1;
+      font-weight: bold;
+      white-space: nowrap;
+      text-shadow: 0 0 8px #888954;
+      animation: fall 5s linear forwards;
+    }
+
+    @keyframes fall {
+      from { transform: translateY(-10vh); opacity: 1; }
+      to   { transform: translateY(110vh); opacity: 0; }
+    }
+    h1{
+      font-size: 40px;
+    }
+    h1 {
+  font-size: 48px;
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+  color: #fff; /* màu chữ chính */
+  text-align: center;
+  margin-top: 50px;
+
+  /* Hiệu ứng phát sáng neon */
+  text-shadow: 
+    0 0 5px #fff,
+    0 0 10px rgb(41, 198, 117),
+    0 0 20px rgb(57, 132, 82),
+    0 0 40px rgb(42, 164, 81),
+    0 0 80px rgb(42, 147, 86);
+    
+  font-family: 'Cadena', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  animation: neonPulse 2s infinite alternate;
+}
+@font-face {
+  font-family: "Cadena";
+  src: url("Cadena.otf") format("opentype");
+}
+/* Hiệu ứng nhấp nháy nhẹ */
+@keyframes neonPulse {
+  from {
+    text-shadow: 
+      0 0 5px #fff,
+      0 0 10px #0ff,
+      0 0 20px #0ff,
+      0 0 40px #0ff,
+      0 0 80px #0ff;
+  }
+  to {
+    text-shadow: 
+      0 0 10px #fff,
+      0 0 20px #0ff,
+      0 0 40px #0ff,
+      0 0 80px #0ff,
+      0 0 160px #0ff;
+  }
+}
+
+</style>
+</head>
+<body>
+<!-- 👇 thêm canvas nền -->
+<canvas id="bg-canvas"></canvas>
+
+<h1>Kỷ Niệm Của Cả Nhà</h1>
+
+<div class="stage">
+  <div class="carousel" id="carousel">
+    <div class="carousel-track" id="track"></div>
+  </div>
+</div>
+
+<!-- DANH SÁCH NGÀY -->
+<div class="days">
+  <div class="day" 
+     data-media="anh-gd (10).jpg,anh-gd (11).jpg,anh-gd (8).jpg,
+     anh-gd (1).jpg,anh-gd (2).jpg,anh-gd (3).jpg,
+     anh-gd (4).jpg,anh-gd (5).jpg,anh-gd (6).jpg,
+     anh-gd (7).jpg,anh-gd (9).jpg,anh-gd (12).jpg,
+     anh-gd (13).jpg,anh-gd (1).png,anh-gd (2).png,anh-gd (3).png,
+     anh-gd (4).png,anh-gd (5).png,anh-gd (6).png,
+     anh-gd (7).png,anh-gd (8).png,anh-gd (9).png,
+     anh-gd (10).png,anh-gd (11).png,anh-gd (12).png,
+     anh-gd (13).png,anh-gd (14).png,anh-gd (15).png,
+     anh-gd (16).png,anh-gd (17).png,anh-gd (18).png,
+     anh-gd (19).png,anh-gd (20).png,anh-gd (21).png,
+     anh-gd (22).png
+     ">
+              
+                 profile gia đình
+                 </div>
+    <div class="day"
+  data-media="anh-mn (1).jpg,anh-mn (2).jpg,anh-mn (3).jpg,anh-mn (4).jpg,anh-mn (5).jpg,anh-mn (6).jpg,anh-mn (7).jpg,anh-mn (8).jpg,anh-mn (9).jpg,anh-mn (10).jpg,anh-mn (11).jpg,anh-mn (12).jpg,anh-mn (13).jpg,anh-mn (14).jpg,anh-mn (15).jpg,anh-mn (16).jpg,anh-mn (17).jpg,anh-mn (18).jpg,anh-mn (19).jpg,anh-mn (20).jpg,anh-mn (21).jpg,anh-mn (22).jpg,anh-mn (23).jpg,anh-mn (24).jpg,anh-mn (25).jpg,anh-mn (26).jpg,anh-mn (27).jpg,anh-mn (28).jpg,anh-mn (29).jpg,anh-mn (30).jpg,anh-mn (31).jpg,anh-mn (32).jpg,anh-mn (33).jpg,anh-mn (34).jpg,anh-mn (35).jpg,anh-mn (36).jpg,anh-mn (37).jpg,anh-mn (38).jpg,anh-mn (39).jpg,anh-mn (40).jpg,anh-mn (41).jpg,anh-mn (42).jpg,anh-mn (43).jpg,anh-mn (44).jpg,anh-mn (45).jpg,anh-mn (46).jpg,anh-mn (47).jpg,anh-mn (48).jpg,anh-mn (49).jpg,anh-mn (50).jpg,anh-mn (51).jpg,anh-mn (52).jpg,anh-mn (53).jpg,anh-mn (54).jpg,anh-mn (55).jpg,anh-mn (56).jpg,anh-mn (57).jpg,anh-mn (58).jpg,anh-mn (59).jpg,anh-mn (60).jpg,anh-mn (61).jpg,anh-mn (62).jpg,anh-mn (63).jpg,anh-mn (64).jpg,anh-mn (65).jpg,anh-mn (66).jpg,anh-mn (67).jpg,anh-mn (68).jpg,anh-mn (69).jpg,anh-mn (70).jpg,anh-mn (71).jpg,anh-mn (72).jpg,anh-mn (73).jpg,anh-mn (74).jpg,anh-mn (75).jpg,anh-mn (76).jpg,anh-mn (77).jpg,anh-mn (78).jpg,anh-mn (79).jpg,anh-mn (80).jpg,anh-mn (81).jpg,anh-mn (82).jpg,anh-mn (83).jpg,anh-mn (84).jpg,anh-mn (85).jpg,anh-mn (86).jpg,anh-mn (87).jpg,anh-mn (88).jpg,anh-mn (89).jpg,anh-mn (90).jpg,anh-mn (91).jpg,anh-mn (92).jpg,anh-mn (93).jpg,anh-mn (94).jpg,anh-mn (95).jpg,anh-mn (96).jpg,anh-mn (97).jpg,anh-mn (98).jpg,anh-mn (99).jpg">
+  quà tặng cuộc sống
+</div>
+
+<div class="day"
+  data-media="anh-mn (100).jpg,anh-mn (101).jpg,anh-mn (102).jpg,anh-mn (103).jpg,anh-mn (104).jpg,anh-mn (105).jpg,anh-mn (106).jpg,anh-mn (107).jpg,anh-mn (108).jpg,anh-mn (109).jpg,anh-mn (110).jpg,anh-mn (111).jpg,anh-mn (112).jpg,anh-mn (113).jpg,anh-mn (114).jpg,anh-mn (115).jpg,anh-mn (116).jpg,anh-mn (117).jpg,anh-mn (118).jpg,anh-mn (119).jpg,anh-mn (120).jpg,anh-mn (121).jpg,anh-mn (122).jpg,anh-mn (123).jpg,anh-mn (124).jpg,anh-mn (125).jpg,anh-mn (126).jpg,anh-mn (127).jpg,anh-mn (128).jpg,anh-mn (129).jpg,anh-mn (130).jpg,anh-mn (131).jpg,anh-mn (132).jpg,anh-mn (133).jpg,anh-mn (134).jpg,anh-mn (135).jpg,anh-mn (136).jpg,anh-mn (137).jpg,anh-mn (138).jpg,anh-mn (139).jpg,anh-mn (140).jpg,anh-mn (141).jpg,anh-mn (142).jpg,anh-mn (143).jpg,anh-mn (144).jpg,anh-mn (145).jpg,anh-mn (146).jpg,anh-mn (147).jpg,anh-mn (148).jpg,anh-mn (149).jpg,anh-mn (150).jpg,anh-mn (151).jpg,anh-mn (152).jpg,anh-mn (153).jpg,anh-mn (154).jpg,anh-mn (155).jpg,anh-mn (156).jpg,anh-mn (157).jpg,anh-mn (158).jpg,anh-mn (159).jpg,anh-mn (160).jpg,anh-mn (161).jpg,anh-mn (162).jpg,anh-mn (163).jpg,anh-mn (164).jpg,anh-mn (165).jpg,anh-mn (166).jpg,anh-mn (167).jpg,anh-mn (168).jpg,anh-mn (169).jpg,anh-mn (170).jpg,anh-mn (171).jpg,anh-mn (172).jpg,anh-mn (173).jpg,anh-mn (174).jpg,anh-mn (175).jpg,anh-mn (176).jpg,anh-mn (177).jpg,anh-mn (178).jpg,anh-mn (179).jpg,anh-mn (180).jpg,anh-mn (181).jpg,anh-mn (182).jpg,anh-mn (183).jpg,anh-mn (184).jpg,anh-mn (185).jpg,anh-mn (186).jpg,anh-mn (187).jpg,anh-mn (188).jpg,anh-mn (189).jpg,anh-mn (190).jpg,anh-mn (191).jpg,anh-mn (192).jpg,anh-mn (193).jpg,anh-mn (194).jpg,anh-mn (195).jpg,anh-mn (196).jpg,anh-mn (197).jpg,anh-mn (198).jpg">
+  phần quà tiếp theo
+</div>
+
+  <div class="day" data-media="|temp.mp3,anh-dim (1).jpg,anh-dim (2).jpg,anh-dim (3).jpg,anh-dim (4).jpg,anh-dim (5).jpg,anh-dim (6).jpg,anh-dim (7).jpg,anh-dim (8).jpg,anh-dim (9).jpg,anh-dim (10).jpg,anh-dim (11).jpg,anh-dim (12).jpg,anh-dim (13).jpg,anh-dim (14).jpg,anh-dim (15).jpg,anh-dim (16).jpg,anh-dim (17).jpg,anh-dim (18).jpg,anh-dim (19).jpg,anh-dim (20).jpg,anh-dim (21).jpg,anh-dim (22).jpg,anh-dim (23).jpg,anh-dim (24).jpg,anh-dim (25).jpg,anh-dim (26).jpg,anh-dim (27).jpg,anh-dim (28).jpg,anh-dim (29).jpg,anh-dim (30).jpg,anh-dim (31).jpg,anh-dim (32).jpg,anh-dim (33).jpg,anh-dim (34).jpg,anh-dim (35).jpg,anh-dim (36).jpg,anh-dim (37).jpg,anh-dim (38).jpg,anh-dim (39).jpg,anh-dim (40).jpg,anh-dim (41).jpg,anh-dim (42).jpg,anh-dim (43).jpg,anh-dim (44).jpg,anh-dim (45).jpg,anh-dim (46).jpg,anh-dim (47).jpg,anh-dim (48).jpg,anh-dim (49).jpg,anh-dim (50).jpg,anh-dim (51).jpg,anh-dim (52).jpg,anh-dim (53).jpg,anh-dim (54).jpg,anh-dim (55).jpg,anh-dim (56).jpg,anh-dim (57).jpg,anh-dim (58).jpg,anh-dim (59).jpg,anh-dim (60).jpg,anh-dim (61).jpg,anh-dim (62).jpg,anh-dim (63).jpg,anh-dim (64).jpg,anh-dim (65).jpg,anh-dim (66).jpg,anh-dim (67).jpg,anh-dim (68).jpg,anh-dim (69).jpg,anh-dim (70).jpg,anh-dim (71).jpg,anh-dim (72).jpg,anh-dim (73).jpg,anh-dim (74).jpg,anh-dim (75).jpg,anh-dim (76).jpg,anh-dim (77).jpg,anh-dim (78).jpg,anh-dim (79).jpg,anh-dim (80).jpg,anh-dim (81).jpg,anh-dim (82).jpg,anh-dim (83).jpg,anh-dim (84).jpg"
+  data-captions="vui lòng xem và không đánh gấu">
+                
+  Chắc chừa bạn ra
+
+</div>
+
+    <div class="day" 
+     data-media="anh-dim (85).jpg,anh-dim (86).jpg,anh-dim (87).jpg,anh-dim (88).jpg,anh-dim (89).jpg,anh-dim (90).jpg,
+                   anh-dim (91).jpg,anh-dim (92).jpg,anh-dim (93).jpg,anh-dim (94).jpg,anh-dim (95).jpg,anh-dim (96).jpg,
+                   anh-dim (97).jpg,anh-dim (98).jpg,anh-dim (99).jpg,anh-dim (100).jpg,anh-dim (101).jpg,anh-dim (102).jpg,
+                   anh-dim (103).jpg,anh-dim (104).jpg,anh-dim (105).jpg,anh-dim (106).jpg,anh-dim (107).jpg,anh-dim (108).jpg,
+                   anh-dim (109).jpg,anh-dim (110).jpg,anh-dim (111).jpg,anh-dim (112).jpg,anh-dim (113).jpg,anh-dim (114).jpg,
+                   anh-dim (115).jpg,anh-dim (116).jpg,anh-dim (117).jpg,anh-dim (118).jpg,anh-dim (119).jpg,anh-dim (120).jpg,
+                   anh-dim (121).jpg,anh-dim (122).jpg,anh-dim (123).jpg,anh-dim (124).jpg,anh-dim (125).jpg,anh-dim (126).jpg,
+                   anh-dim (127).jpg,anh-dim (128).jpg,anh-dim (129).jpg,anh-dim (130).jpg,anh-dim (131).jpg,anh-dim (132).jpg,
+                   anh-dim (133).jpg,anh-dim (134).jpg,anh-dim (135).jpg,anh-dim (136).jpg,anh-dim (137).jpg,anh-dim (138).jpg,
+                   anh-dim (139).jpg,anh-dim (140).jpg,anh-dim (141).jpg,anh-dim (142).jpg,anh-dim (143).jpg,anh-dim (144).jpg,
+                   anh-dim (145).jpg,anh-dim (146).jpg,anh-dim (147).jpg,anh-dim (148).jpg,anh-dim (149).jpg,anh-dim (150).jpg,
+                   anh-dim (151).jpg,anh-dim (152).jpg,anh-dim (153).jpg,anh-dim (154).jpg,anh-dim (155).jpg,anh-dim (156).jpg,
+                   anh-dim (157).jpg,anh-dim (158).jpg,anh-dim (159).jpg,anh-dim (160).jpg">
+              
+                 tưởng hết shao
+                 </div>
+<div class="day" 
+     data-media="anh-dim (161).jpg,anh-dim (162).jpg,anh-dim (163).jpg,anh-dim (164).jpg,anh-dim (165).jpg,anh-dim (166).jpg,
+                   anh-dim (167).jpg,anh-dim (168).jpg,anh-dim (169).jpg,anh-dim (170).jpg,anh-dim (171).jpg,anh-dim (172).jpg,
+                   anh-dim (173).jpg,anh-dim (174).jpg,anh-dim (175).jpg,anh-dim (176).jpg,anh-dim (177).jpg,anh-dim (178).jpg,
+                   anh-dim (179).jpg,anh-dim (180).jpg,anh-dim (181).jpg,anh-dim (182).jpg,anh-dim (183).jpg,anh-dim (184).jpg,
+                   anh-dim (185).jpg,anh-dim (186).jpg,anh-dim (187).jpg,anh-dim (188).jpg,anh-dim (189).jpg,anh-dim (190).jpg,
+                   anh-dim (191).jpg,anh-dim (192).jpg,anh-dim (193).jpg,anh-dim (194).jpg,anh-dim (195).jpg,anh-dim (196).jpg,
+                   anh-dim (197).jpg,anh-dim (198).jpg,anh-dim (199).jpg,anh-dim (200).jpg,anh-dim (201).jpg,anh-dim (202).jpg,
+                   anh-dim (203).jpg,anh-dim (204).jpg,anh-dim (205).jpg,anh-dim (206).jpg,anh-dim (207).jpg,anh-dim (208).jpg,
+                   anh-dim (209).jpg,anh-dim (210).jpg,anh-dim (211).jpg,anh-dim (212).jpg,anh-dim (213).jpg,anh-dim (214).jpg,
+                   anh-dim (215).jpg,anh-dim (216).jpg,anh-dim (217).jpg,anh-dim (218).jpg,anh-dim (219).jpg,anh-dim (220).jpg,
+                   anh-dim (221).jpg,anh-dim (222).jpg,anh-dim (223).jpg,anh-dim (224).jpg,anh-dim (225).jpg,anh-dim (226).jpg,
+                   anh-dim (227).jpg,anh-dim (228).jpg,anh-dim (229).jpg,anh-dim (230).jpg,anh-dim (231).jpg,anh-dim (232).jpg,
+                   anh-dim (233).jpg,anh-dim (234).jpg,anh-dim (235).jpg,anh-dim (236).jpg,anh-dim (237).jpg,anh-dim (238).jpg,
+                   anh-dim (239).jpg,anh-dim (240).jpg,anh-dim (241).jpg,anh-dim (242).jpg,anh-dim (1).png,anh-dim (2).png,
+                   anh-dim (3).png,anh-dim (4).png,anh-dim (5).png">
+              
+                 chắc chưa đủ đâu
+                 </div>
+    <div class="day" 
+  data-media="|Diem.mp3,|ChiGiau.mp3" 
+  data-captions="Con Tướng Nhất và bịch ngũ cốc|ai dậy">
+  Giọng Ải Giọng Ai
+</div>
+
+<div class="day" 
+  data-media="
+vn (1).mp4,
+vn (2).mp4,
+vn (3).mp4,
+vn (4).mp4,
+vn (5).mp4,
+vn (6).mp4,
+vn (7).mp4,
+vn (8).mp4,
+vn (9).mp4,
+vn (10).mp4,
+vn (11).mp4,
+vn (12).mp4,
+vn (13).mp4,
+vn (14).mp4,
+vn (15).mp4,
+vn (16).mp4,
+vn (17).mp4,
+vn (18).mp4,
+vn (19).mp4,
+vn (20).mp4,
+vn (21).mp4,
+vn (22).mp4,
+vn (23).mp4,
+vn (24).mp4,
+vn (25).mp4,
+vn (26).mp4,
+vn (27).mp4,
+vn (28).mp4,
+vn (29).mp4,
+vn (30).mp4,
+vn (31).mp4,
+vn (32).mp4,
+vn (33).mp4,
+vn (34).mp4,
+vn (35).mp4,
+vn (36).mp4,
+vn (37).mp4,
+vn (38).mp4,
+vn (39).mp4,
+vn (40).mp4,
+vn (41).mp4,
+vn (42).mp4,
+vn (43).mp4,
+vn (44).mp4,
+vn (45).mp4,
+vn (46).mp4,
+vn (47).mp4,
+vn (48).mp4,
+vn (49).mp4,
+vn (50).mp4,
+vn (51).mp4,
+vn (52).mp4,
+vn (53).mp4,
+vn (54).mp4,
+vn (55).mp4,
+vn (56).mp4,
+vn (57).mp4,
+vn (58).mp4,
+vn (59).mp4,
+vn (60).mp4,
+vn (61).mp4,
+vn (62).mp4,
+vn (63).mp4,
+vn (64).mp4,
+vn (65).mp4,
+vn (66).mp4,
+vn (67).mp4,
+vn (68).mp4,
+vn (69).mp4,
+vn (70).mp4,
+vn (71).mp4,
+vn (72).mp4,
+vn (73).mp4,
+vn (74).mp4,
+vn (75).mp4,
+vn (76).mp4,
+vn (77).mp4,
+vn (78).mp4,
+vn (79).mp4,
+vn (80).mp4,
+vn (81).mp4,
+vn (82).mp4,
+vn (83).mp4,
+vn (84).mp4,
+vn (85).mp4,
+vn (86).mp4"> 
+  khoảng khắc ngắn
+</div>
+<div class="day" 
+  data-media="
+vn (87).mp4,
+vn (88).mp4,
+vn (89).mp4,
+vn (90).mp4,
+vn (91).mp4,
+vn (92).mp4,
+vn (93).mp4,
+vn (94).mp4,
+vn (95).mp4,
+vn (96).mp4,
+vn (97).mp4,
+vn (98).mp4,
+vn (99).mp4,
+vn (100).mp4,
+vn (101).mp4,
+vn (102).mp4,
+vn (103).mp4,
+vn (104).mp4,
+vn (105).mp4,
+vn (106).mp4,
+vn (107).mp4,
+vn (108).mp4,
+vn (109).mp4,
+vn (110).mp4,
+vn (111).mp4,
+vn (112).mp4,
+vn (113).mp4,
+vn (114).mp4,
+vn (115).mp4,
+vn (116).mp4,
+vn (117).mp4,
+vn (118).mp4,
+vn (119).mp4,
+vn (120).mp4,
+vn (121).mp4,
+vn (122).mp4,
+vn (123).mp4,
+vn (124).mp4,
+vn (125).mp4,
+vn (126).mp4,
+vn (127).mp4,
+vn (128).mp4,
+vn (129).mp4,
+vn (130).mp4,
+vn (131).mp4,
+vn (132).mp4,
+vn (133).mp4,
+vn (134).mp4,
+vn (135).mp4,
+vn (136).mp4,
+vn (137).mp4,
+vn (138).mp4,
+vn (139).mp4,
+vn (140).mp4,
+vn (141).mp4,
+vn (142).mp4,
+vn (143).mp4,
+vn (144).mp4,
+vn (145).mp4,
+vn (146).mp4,
+vn (147).mp4,
+vn (148).mp4,
+vn (149).mp4,
+vn (150).mp4,
+vn (151).mp4,
+vn (152).mp4,
+vn (153).mp4,
+vn (154).mp4,
+vn (155).mp4,
+vn (156).mp4,
+vn (157).mp4,
+vn (158).mp4,
+vn (159).mp4,
+vn (160).mp4,
+vn (161).mp4,
+vn (162).mp4,
+vn (163).mp4,
+vn (164).mp4,
+vn (165).mp4,
+vn (166).mp4,
+vn (167).mp4,
+vn (168).mp4,
+vn (169).mp4,
+vn (170).mp4,
+vn (171).mp4,
+vn (172).mp4">
+  Cũng cũng ngắn
+</div>
+<div class = "day"
+    data-media="">
+    bật/tắt background
+  </div>
+    
+<button class="prev" id="prevBtn">&#10094;</button>
+  <button class="next" id="nextBtn">&#10095;</button>
+  </div>
+
+<script>
+  /* --------------------- CODE CŨ GIỮ NGUYÊN -------------------- */
+  const track = document.getElementById("track");
+const dayEls = document.querySelectorAll(".day");
+const isImage = src => /\.(jpe?g|png|gif|webp|avif)$/i.test(src);
+const isVideo = src => /\.(mp4|webm|ogg)$/i.test(src);
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+let list = [];
+let captions = [];
+let angle = 0;
+let startX = 0;
+let isDragging = false;
+let counter = 0;
+const radius = 800;
+
+let currentAudio = null; // giữ audio đang phát
+
+function makeMediaEl(src) {
+  if (isImage(src)) {
+    const img = document.createElement("img");
+    img.src = src;
+    return img;
+  } else if (isVideo(src)) {
+    const vid = document.createElement("video");
+    vid.dataset.src = src;   // chỉ gắn data-src
+    vid.playsInline = true;
+    vid.muted = true;
+    vid.preload = "none";    // không preload
+    return vid;
+  }
+  return document.createTextNode("Không hỗ trợ: " + src);
+}
+
+function renderCards() {
+  track.innerHTML = "";
+  if (!list.length) return;
+  list.forEach((item,i) => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    if (item.img) {
+      const media = makeMediaEl(item.img);
+      card.appendChild(media);
+    }
+
+    const p = document.createElement("p");
+    p.className = "caption";
+    p.textContent = captions[i] || "";
+    card.appendChild(p);
+
+    if (item.audio) {
+      card.dataset.audio = item.audio;
+    }
+
+    track.appendChild(card);
+  });
+  updatePositions();
+}
+
+
+function updatePositions() {
+  const cards = document.querySelectorAll(".card");
+  const total = cards.length;
+  let centerCard = null;
+
+  cards.forEach((card, i) => {
+    const theta = (360 / total) * i + angle;
+    const rad = theta * Math.PI / 180;
+    let x = Math.sin(rad) * radius - 150;
+    let z = Math.cos(rad) * radius;
+    let finalScale = 0.7;
+    let opacity = 0.2;
+    let zIndex = Math.floor(z);
+
+    if (Math.abs(theta % 360) < 2 || Math.abs(theta % 360) > 358) {
+      finalScale = 1.2;
+      opacity = 1;
+      zIndex = 1000;
+      centerCard = card;
+    }
+
+    card.style.transform = `translateX(${x}px) translateZ(${z}px) scale(${finalScale})`;
+    card.style.top = "35%";
+    card.style.left = "50%";
+    card.style.opacity = opacity;
+    card.style.zIndex = zIndex;
+
+    // 🎬 video chỉ phát nếu card ở giữa
+    const video = card.querySelector("video");
+    if (video) {
+      if (card === centerCard) {
+        if (!video.src) video.src = video.dataset.src; // load khi tới giữa
+        if (video.paused) {
+          video.muted = false;
+          video.play().catch(()=>{});
+        }
+      } else {
+        if (!video.paused) video.pause();
+        video.muted = true;
+      }
+    }
+  });
+
+  // 🎵 audio chỉ phát nếu card ở giữa
+  if (centerCard) {
+    const audioSrc = centerCard.dataset.audio;
+    if (audioSrc) {
+      if (!currentAudio || !currentAudio.src.includes(audioSrc)) {
+        if (currentAudio) currentAudio.pause();
+        currentAudio = new Audio(audioSrc);
+        currentAudio.play().catch(()=>{});
+      }
+    } else {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+    }
+  }
+}
+
+dayEls.forEach(d => {
+  d.addEventListener("click", () => {
+    dayEls.forEach(x => x.classList.remove("active"));
+    d.classList.add("active");
+
+    // 🔇 khi đổi day thì dừng audio cũ
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+
+    list = [];
+    const mediaStr = d.getAttribute("data-media") || "";
+    mediaStr.split(",").forEach(s => {
+      if (!s.trim()) return;
+      const parts = s.split("|").map(p => p.trim());
+      list.push({ img: parts[0], audio: parts[1] || null });
+    });
+
+    captions = (d.getAttribute("data-captions")||"").split("|").map(s=>s.trim());
+    angle = 0;
+    renderCards();
+  });
+});
+
+document.addEventListener("mousedown", e => { isDragging = true; startX = e.clientX; });
+document.addEventListener("mousemove", e => {
+  if (!isDragging) return;
+  const deltaX = e.clientX - startX;
+  angle += deltaX * 0.1;
+  updatePositions();
+  startX = e.clientX;
+});
+document.addEventListener("mouseup", () => { isDragging = false; });
+
+document.addEventListener("touchstart", e => { isDragging = true; startX = e.touches[0].clientX; });
+document.addEventListener("touchmove", e => {
+  if (!isDragging) return;
+  const deltaX = e.touches[0].clientX - startX;
+  angle += deltaX * 0.3;
+  updatePositions();
+  startX = e.touches[0].clientX;
+});
+document.addEventListener("touchend", () => { isDragging = false; });
+
+(function selectFirstDay(){
+  for (const d of dayEls) {
+    if ((d.getAttribute('data-media')||'').trim()) { d.click(); break; }
+  }
+})();
+
+nextBtn.addEventListener('click', () => { angle -= 360 / list.length; updatePositions(); });
+track.addEventListener("click", e => {
+  const card = e.target.closest(".card");
+  if (!card) return;
+  const cards = [...document.querySelectorAll(".card")];
+  const idx = cards.indexOf(card);
+  if (idx === -1) return;
+  angle = -(360 / cards.length) * idx;
+  updatePositions();
+});
+prevBtn.addEventListener('click', () => { angle += 360 / list.length; updatePositions(); });
+// Điều khiển bằng phím mũi tên
+document.addEventListener("keydown", e => {
+  if (!list.length) return;
+  if (e.key === "ArrowRight") {
+    angle -= 360 / list.length;
+    updatePositions();
+  } else if (e.key === "ArrowLeft") {
+    angle += 360 / list.length;
+    updatePositions();
+  }
+});
+
+
+  /* --------------------- HIỆU ỨNG CHỮ RƠI -------------------- */
+const canvas = document.getElementById("bg-canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const texts = [
+  "AL Bá Gia Lai",
+  "Mời Cả Nhà Ăn Cơm",
+  "8h họp đội hình nha mọi người ơi",
+  "Chúc cả nhà luôn vui vẻ",
+  "Thành công nhé!",
+  "Ai đi hành chính công không",
+  "Thiên ơi",
+  "Anh Pon ơi",
+  "Nấu cơm chưa vậy",
+  "Hôm nay không tập múa nha",
+  "bắt Cọp uống rượu cần đê",
+  "chính quyền ",
+  "giáng my heo",
+  "điềm ồn",
+  "Lan ồn nhưng đáng yêu",
+  "chị già",
+  "Trân là heo peppa",
+  "trang xinh???",
+  "nhi cute dễ thương vô đối",
+  "Sĩ U40",
+  "cái làng này nó ngu quá",
+  "Bà Kim Điên ",
+  "Ba Duy",
+  "Ánh ngu",
+  "Công chúa thủy tề",
+  "Ngân Khoa mập",
+  "Xuân Khôi Đẹp 1st",
+  "Cô giáo",
+  "Ngân thu mập",
+  "Le le",
+  "Yến Yến",
+  "Hưng Già",
+  "Đạt cọc",
+  "Tiêu Dao",
+  "Phú bà",
+  "Ông địa Khương",
+  "Gấu",
+  "Thỏ",
+  "Alice",
+  "Đảng Viên mới",
+  "Trăng hôm nay đẹp nhỉ",
+  "Nờ Lờ",
+  "Hệ Tư Tưởng Ngọc Lan",
+  "Nhà tài trợ kim cương",
+  "Chơi U đi cả nhà",
+  "Minh mày chọn ai",
+  "Minh, chị thích em lắm đó",
+  "Chị thắng rồi.....",
+  "Cả làng đi ngủ",
+  "Sói ơi dậy đi",
+  "Mời cả nhà ra tập thể dục",
+  "Nay mình chạy 3 vòng sân",
+  "Tối em với anh đi ngắm trăng",
+  "Thông báo tìm đồ",
+  "Đất nước nghiêng mình...",
+  "Bà Kim, phù phép bả cho em",
+  "Thủy Tề làm phép cho em",
+  "F4 + 1 ",
+  "người ta có câu",
+  "Ba duy",
+  "2 3 dô , 2 3 uống",
+  "Cô này là cô này đẹp nhất",
+  "Pon Tẻn Tẻn",
+  "Cừu Dolyy",
+  "Ê! bí content rồi",
+  "Trân đẹp mà điên",
+  "mấy đứa hậu cung này",
+  "nó nào,ẻm mà ",
+  "Tao không say",
+  "Minh ơi mai em hong ngồi với chị hả",
+  "rớt miếng kìa",
+  "Tối nay trùm mền nó",
+  "Xôi dương châu",
+  "Trứng xào mướp",
+  "con bé Yến léo nhéo",
+  "Điềm loắt choắt",
+  "gửi gắm yêu thương cả quãng đời còn lại",
+  "Khải bán chỉ đỏ",
+  "đố em tìm thấy cái muỗng",
+  "lấy cho cái môi ",
+  "rửa chén dưới trời mưa",
+  "lời nói đầu môi",
+  "anh công chúa",
+  "vô xếp hàng nha mọi người",
+  "tiểu cường",
+  "trà sữa cốm,tiệm nhà bơ",
+  "Ngọc Lan ăn 10 quả chuối",
+  "ăn chậm quá",
+  "trà đường của Ngọc Lan"
+];
+
+const maxLetters = 250; 
+let falling = [];
+
+// Ảnh nền
+const bgImage = new Image();
+bgImage.src = "anh-nen-gd.jpg"; 
+
+// lớp FallingText 3D + glow
+class FallingText {
+  constructor(text) {
+    this.text = text;
+    this.x = (Math.random() - 0.5) * canvas.width * 2;  
+    this.y = Math.random() * 80;      
+    this.z = Math.random() * 1000 + 300; 
+    this.speed = 1.5 + Math.random() * 2;  
+    this.baseSize = 50 + Math.random() * 20; 
+
+    // màu chữ + phát sáng
+    this.color = "white";
+    const glowColors = ["rgba(0,200,255,0.8)", "rgba(255,100,200,0.8)", "rgba(255,200,0,0.8)"];
+    this.glow = glowColors[Math.floor(Math.random() * glowColors.length)];
+  }
+  
+  draw() {
+    const scale = 600 / (600 + this.z); 
+    const screenX = canvas.width / 2 + this.x * scale;
+    const screenY = this.y * scale;
+
+    const size = this.baseSize * scale;
+    const opacity = Math.max(0, Math.min(1, 1 - this.z / 1500));
+
+    ctx.font = `bold ${size}px Times New Roman`;
+    ctx.fillStyle = `rgba(255,255,255,${opacity})`;
+
+    // hiệu ứng glow
+    ctx.shadowColor = this.glow;
+    ctx.shadowBlur = 25;
+
+    ctx.fillText(this.text, screenX, screenY);
+
+    // reset shadow để tránh ảnh hưởng phần khác
+    ctx.shadowBlur = 0;
+
+    // update vị trí
+    this.y += this.speed; 
+    this.z -= 2;          
+  }
+}
+
+// animate
+function animate() {
+  ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+
+  if (falling.length < maxLetters && Math.random() > 0.88) {
+    const t = texts[Math.floor(Math.random() * texts.length)];
+    falling.push(new FallingText(t));
+  }
+
+  falling.forEach((ft, i) => {
+    ft.draw();
+    if (ft.y > canvas.height + 100 || ft.z < -200) {
+      falling.splice(i, 1);
+    }
+  });
+
+  requestAnimationFrame(animate);
+}
+
+bgImage.onload = () => {
+  ctx.globalAlpha = 0.2; 
+  ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+  ctx.globalAlpha = 1.0; 
+
+  animate(); // gọi animate sau khi vẽ nền
+};
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+</script>
+
+</body>
+</html>
